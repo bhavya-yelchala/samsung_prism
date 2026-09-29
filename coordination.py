@@ -1,10 +1,10 @@
 """Coordination layer managing turn epochs, prompt tool cancellations, and grace period filtering."""
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
-from schemas.actions import OutputAction, StateSnapshot
-from schemas.events import InputEvent
-from agent.state import SessionStateManager
-from agent.tools import IdempotencyGuard, ToolRegistry
+from actions import OutputAction, StateSnapshot
+from events import InputEvent
+from state import SessionStateManager
+from tools import IdempotencyGuard, ToolRegistry
 
 
 class CoordinationLayer:

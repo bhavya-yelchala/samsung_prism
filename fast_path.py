@@ -1,9 +1,8 @@
 """Fast-path reflex engine and conversational floor manager."""
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-from schemas.actions import OutputAction, StateSnapshot
-from schemas.events import InputEvent
-from agent.state import SessionStateManager
+from actions import OutputAction, StateSnapshot
+from state import SessionStateManager
 
 
 class FastPathReflexEngine:
@@ -13,11 +12,9 @@ class FastPathReflexEngine:
         self.state_manager = state_manager
         self._last_filler_time: float = -10000.0
         self._filler_cadence_ms: float = 800.0  # Minimum interval to avoid excessive fillers
-        self._spoken_fillers_count: int = 0
 
     def reset(self) -> None:
         self._last_filler_time = -10000.0
-        self._spoken_fillers_count = 0
 
     def generate_acknowledgment(
         self,
@@ -36,7 +33,6 @@ class FastPathReflexEngine:
             return None
 
         self._last_filler_time = timestamp
-        self._spoken_fillers_count += 1
 
         return OutputAction.spoken_filler(
             timestamp=timestamp,
@@ -74,7 +70,7 @@ class FastPathReflexEngine:
                 return f"Looking up flights to {dest}..."
             return "Searching for available flights..."
 
-        elif tool_name == "book_flight" or intent == "book_flight":
+        elif tool_name == "book_flight" or intent in ("book_flight", "booking_flight"):
             flight_id = slots.get("flight_id") or slots.get("destination")
             return f"Processing your booking request now..."
 

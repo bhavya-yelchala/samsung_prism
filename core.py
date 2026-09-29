@@ -2,14 +2,14 @@
 from __future__ import annotations
 import asyncio
 from typing import Any, Dict, List, Optional
-from schemas.events import EventType, InputEvent
-from schemas.actions import ActionType, OutputAction, StateSnapshot
-from agent.state import SessionStateManager
-from agent.tools import ToolRegistry, IdempotencyGuard
-from agent.coordination import CoordinationLayer
-from agent.fast_path import FastPathReflexEngine
-from agent.slow_path import SlowPathPlanner
-from agent.multimodal import VisionGrounder, AudioDisfluencyResolver
+from events import EventType, InputEvent
+from actions import ActionType, OutputAction, StateSnapshot
+from state import SessionStateManager
+from tools import ToolRegistry, IdempotencyGuard
+from coordination import CoordinationLayer
+from fast_path import FastPathReflexEngine
+from slow_path import SlowPathPlanner
+from multimodal import VisionGrounder, AudioDisfluencyResolver
 
 
 class InterruptibleRealTimeAgent:
@@ -78,13 +78,13 @@ class InterruptibleRealTimeAgent:
             actions.extend(cancellations)
             if "cancel" in source.lower():
                 snap = self.state_manager.get_snapshot()
-                snap.status = "cancelled"
                 closure = OutputAction.final_response(
                     timestamp=t,
                     text="Understood, your request has been cancelled.",
                     snapshot=snap,
                     epoch=self.state_manager.epoch,
                     metadata={"cancelled_by": source},
+                    status="cancelled",
                 )
                 actions.append(closure)
 
@@ -132,10 +132,10 @@ class InterruptibleRealTimeAgent:
             if repair_info:
                 repaired_from = repair_info.get("repaired_from")
                 if self.state_manager.active_calls:
-                    # Stale active call detected: immediately cancel!
+                    repaired_to = next((v for k, v in repair_info.items() if k != "repaired_from"), repaired_from)
                     cancellations = self.coordination.handle_interruption(
                         timestamp=t,
-                        reason=f"Mid-utterance slot correction: '{repaired_from}' replaced with '{list(repair_info.values())[0]}'",
+                        reason=f"Mid-utterance slot correction: '{repaired_from}' replaced with '{repaired_to}'",
                     )
                     actions.extend(cancellations)
                 for rk, rv in repair_info.items():
@@ -214,10 +214,12 @@ class InterruptibleRealTimeAgent:
         while self._running:
             try:
                 event = await self.input_queue.get()
-                actions = self.process_event_step(event)
-                for action in actions:
-                    await self.emit_action(action)
-                self.input_queue.task_done()
+                try:
+                    actions = self.process_event_step(event)
+                    for action in actions:
+                        await self.emit_action(action)
+                finally:
+                    self.input_queue.task_done()
             except asyncio.CancelledError:
                 self._running = False
                 break

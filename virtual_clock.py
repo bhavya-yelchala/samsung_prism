@@ -4,10 +4,10 @@ import heapq
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
-from schemas.events import EventType, InputEvent
-from schemas.actions import ActionType, OutputAction
-from agent.core import InterruptibleRealTimeAgent
-from harness.mock_env import MockEnvironment
+from events import EventType, InputEvent
+from actions import ActionType, OutputAction
+from core import InterruptibleRealTimeAgent
+from mock_env import MockEnvironment
 
 
 @dataclass(order=True)
@@ -40,6 +40,7 @@ class VirtualClockHarness:
         self._event_queue: List[ScheduledEvent] = []
         self._event_order_seq = 0
         self._active_scheduled_calls: Dict[str, ScheduledEvent] = {}  # call_id -> ScheduledEvent
+        self._pending_tool_calls: Dict[str, Dict[str, Any]] = {}  # call_id -> {tool_name, args}
 
     def schedule_event(self, event: InputEvent) -> None:
         """Add an event to the virtual timeline."""
@@ -52,17 +53,23 @@ class VirtualClockHarness:
         heapq.heappush(self._event_queue, scheduled)
 
     def schedule_tool_result(self, timestamp: float, call_id: str, tool_name: str, args: Dict[str, Any]) -> None:
-        """Schedule future completion of a mock tool."""
-        res, err = self.mock_env.execute_tool(tool_name, args, call_id)
+        """Schedule future completion of a mock tool (execution deferred until delivery)."""
         latency = self.mock_env.get_latency(tool_name)
         finish_time = timestamp + latency
 
+        # Store pending call info for deferred execution
+        self._pending_tool_calls[call_id] = {
+            "tool_name": tool_name,
+            "args": args,
+        }
+
+        # Create a placeholder result event; actual execution happens at delivery time
         result_event = InputEvent.tool_result(
             timestamp=finish_time,
             call_id=call_id,
             tool_name=tool_name,
-            result=res,
-            error=err,
+            result=None,  # placeholder — filled at delivery
+            error=None,
             execution_time_ms=latency,
         )
         self._event_order_seq += 1
@@ -86,6 +93,7 @@ class VirtualClockHarness:
         self._event_queue.clear()
         self._event_order_seq = 0
         self._active_scheduled_calls.clear()
+        self._pending_tool_calls.clear()
         agent.reset()
 
         trace = ScenarioTrace(scenario_id=scenario_id)
@@ -106,6 +114,27 @@ class VirtualClockHarness:
             # Track interruption timing for latency measurement
             if current_event.type == EventType.INTERRUPTION_SIGNAL:
                 last_interruption_time = current_event.timestamp
+
+            # Deferred execution: execute tool at delivery time (not scheduling time)
+            # This prevents cancelled calls from being counted as mutations
+            if current_event.type == EventType.TOOL_RESULT:
+                call_id = current_event.payload.get("call_id", "")
+                if call_id in self._pending_tool_calls:
+                    pending = self._pending_tool_calls.pop(call_id)
+                    tool_name = pending["tool_name"]
+                    args = pending["args"]
+                    # Only execute if the call was NOT cancelled
+                    if call_id not in self.mock_env.cancelled_calls:
+                        # Check tool registry for is_state_modifying via the trace
+                        is_modifying = any(
+                            a["action"]["payload"].get("is_state_modifying", False)
+                            for a in trace.actions_out
+                            if a["action"].get("call_id") == call_id
+                            and a["action"]["action_type"] == ActionType.TOOL_CALL.value
+                        )
+                        res, err = self.mock_env.execute_tool(tool_name, args, call_id, is_state_modifying=is_modifying)
+                        current_event.payload["result"] = res
+                        current_event.payload["error"] = err
 
             # Record event in trace
             trace.events_in.append({

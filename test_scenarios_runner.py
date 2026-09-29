@@ -1,10 +1,10 @@
 """Unit and Integration tests running the 9 canonical scenarios through the VirtualClockHarness."""
 import unittest
-from agent.core import InterruptibleRealTimeAgent
-from harness.virtual_clock import VirtualClockHarness
-from harness.mock_env import MockEnvironment
-from harness.evaluator import ScenarioEvaluator
-from harness.test_scenarios import get_all_canonical_scenarios
+from core import InterruptibleRealTimeAgent
+from virtual_clock import VirtualClockHarness
+from mock_env import MockEnvironment
+from evaluator import ScenarioEvaluator
+from test_scenarios import get_all_canonical_scenarios
 
 
 class TestInterruptibleRealTimeAgent(unittest.TestCase):
@@ -57,8 +57,8 @@ class TestInterruptibleRealTimeAgent(unittest.TestCase):
 
     def test_interruption_grace_period_cancellation(self):
         """Specifically verifies sub-millisecond cancellation of superseded calls."""
-        from schemas.events import InputEvent
-        from harness.test_scenarios import get_standard_manifest_event
+        from events import InputEvent
+        from test_scenarios import get_standard_manifest_event
 
         events = [
             get_standard_manifest_event(),

@@ -1,7 +1,7 @@
 """Session-scoped State and Slot Management with localized repair support."""
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Set
-from schemas.actions import StateSnapshot
+from actions import StateSnapshot
 
 
 class SessionStateManager:

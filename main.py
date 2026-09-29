@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 import sys
 from typing import List
-from agent.core import InterruptibleRealTimeAgent
-from harness.virtual_clock import VirtualClockHarness
-from harness.mock_env import MockEnvironment
-from harness.evaluator import ScenarioEvaluator, ScenarioScore
-from harness.test_scenarios import get_all_canonical_scenarios
+from core import InterruptibleRealTimeAgent
+from virtual_clock import VirtualClockHarness
+from mock_env import MockEnvironment
+from evaluator import ScenarioEvaluator, ScenarioScore
+from test_scenarios import get_all_canonical_scenarios
 
 
 def print_banner():

@@ -1,6 +1,6 @@
 """Protocol schemas for Interruptible Real-Time Agent."""
-from schemas.events import EventType, InputEvent
-from schemas.actions import ActionType, OutputAction, StateSnapshot
+from events import EventType, InputEvent
+from actions import ActionType, OutputAction, StateSnapshot
 
 __all__ = [
     "EventType",

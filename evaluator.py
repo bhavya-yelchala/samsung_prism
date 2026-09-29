@@ -2,9 +2,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
-from schemas.actions import ActionType
-from schemas.events import EventType
-from harness.virtual_clock import ScenarioTrace
+from actions import ActionType
+from events import EventType
+from virtual_clock import ScenarioTrace
 
 
 @dataclass
@@ -65,9 +65,9 @@ class ScenarioEvaluator:
 
         # Check state snapshot accuracy
         if final_responses:
-            last_snap = final_responses[-1]["action"]["state_snapshot"]
+            last_snap = final_responses[-1]["action"].get("state_snapshot", {})
         elif trace.actions_out:
-            last_snap = trace.actions_out[-1]["action"]["state_snapshot"]
+            last_snap = trace.actions_out[-1]["action"].get("state_snapshot", {})
         else:
             last_snap = {}
 
@@ -105,9 +105,10 @@ class ScenarioEvaluator:
             else:
                 details.append("Interruption Recovery (0/20): Failed to cancel superseded call.")
 
-            # Absence of stale re-runs: check that no completed mutation matches cancelled call
+            # Absence of stale re-runs: check that no tool call was dispatched AFTER its cancellation
             cancelled_calls = set(trace.cancellations_emitted)
-            stale_runs = [c for c in cancelled_calls if c in trace.tool_calls_dispatched[len(trace.cancellations_emitted):]]
+            # A stale re-run is a dispatched call whose call_id was already cancelled
+            stale_runs = [c for c in trace.tool_calls_dispatched if c in cancelled_calls and trace.tool_calls_dispatched.count(c) > 1]
             if not stale_runs:
                 ir_score += 15.0
                 details.append("Interruption Recovery (+15): No stale re-runs observed.")

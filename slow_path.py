@@ -2,12 +2,11 @@
 from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Tuple
-from schemas.actions import OutputAction, StateSnapshot
-from schemas.events import InputEvent
-from agent.state import SessionStateManager
-from agent.tools import ToolRegistry, IdempotencyGuard
-from agent.coordination import CoordinationLayer
-from agent.multimodal import VisionGrounder, AudioDisfluencyResolver
+from actions import OutputAction
+from state import SessionStateManager
+from tools import ToolRegistry, IdempotencyGuard
+from coordination import CoordinationLayer
+from multimodal import VisionGrounder, AudioDisfluencyResolver
 
 
 class SlowPathPlanner:
@@ -66,9 +65,13 @@ class SlowPathPlanner:
             # Passenger count / tickets
             count_match = re.search(r"(\d+|one|two|three|four)\s+(?:tickets?|passengers?|seats?)", lower_text)
             if count_match:
-                slots["passengers"] = count_match.group(1).strip()
+                raw_count = count_match.group(1).strip()
+                word_to_num = {"one": 1, "two": 2, "three": 3, "four": 4}
+                slots["passengers"] = word_to_num.get(raw_count, int(raw_count) if raw_count.isdigit() else 1)
             elif repair_info and "ticket_count" in repair_info:
-                slots["passengers"] = repair_info["ticket_count"]
+                raw_count = repair_info["ticket_count"]
+                word_to_num = {"one": 1, "two": 2, "three": 3, "four": 4}
+                slots["passengers"] = word_to_num.get(raw_count, int(raw_count) if raw_count.isdigit() else 1)
 
         # 3. Customer support / Ticket creation
         elif "ticket" in lower_text or "support" in lower_text or "issue" in lower_text or "complaint" in lower_text:
@@ -94,7 +97,7 @@ class SlowPathPlanner:
                     intent = tool_name
                     # Extract any matching parameters
                     for req in tool_def.required_params:
-                        m = re.search(rf"{req}[:=\s]+([A-Za-z0-9_\-]+)", resolved_text, re.IGNORECASE)
+                        m = re.search(rf"{req}[:=\s]+(.+?)(?:\s+\w+[:=]|$)", resolved_text, re.IGNORECASE)
                         if m:
                             slots[req] = m.group(1).strip()
 
@@ -151,9 +154,15 @@ class SlowPathPlanner:
             tool_name = intent
             tool_def = self.tool_registry.get_tool(tool_name)
             if tool_def:
+                # Copy required params
                 for req in tool_def.required_params:
                     if req in slots:
                         arguments[req] = slots[req]
+                # Also copy any optional params present in slots
+                all_param_names = list(tool_def.parameters.get("properties", {}).keys()) if isinstance(tool_def.parameters, dict) else []
+                for param in all_param_names:
+                    if param not in arguments and param in slots:
+                        arguments[param] = slots[param]
 
         if not tool_name:
             return None, f"No tool mapping found for intent: {intent}"

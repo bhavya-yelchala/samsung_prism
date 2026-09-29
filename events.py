@@ -1,7 +1,7 @@
 """Input Event schemas for the real-time interruptible agent."""
 from __future__ import annotations
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 

@@ -1,7 +1,7 @@
 """Output Action and State Snapshot schemas for the real-time interruptible agent."""
 from __future__ import annotations
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -180,9 +180,10 @@ class OutputAction:
         snapshot: StateSnapshot,
         epoch: int,
         metadata: Optional[Dict[str, Any]] = None,
+        status: str = "completed",
     ) -> OutputAction:
         snap = snapshot.copy()
-        snap.status = "completed"
+        snap.status = status
         return cls(
             timestamp=timestamp,
             action_type=ActionType.FINAL_RESPONSE,

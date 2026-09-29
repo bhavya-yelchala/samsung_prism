@@ -33,7 +33,7 @@ class MockEnvironment:
     def cancel_call(self, call_id: str) -> None:
         self.cancelled_calls.append(call_id)
 
-    def execute_tool(self, tool_name: str, arguments: Dict[str, Any], call_id: str) -> Tuple[Optional[Any], Optional[str]]:
+    def execute_tool(self, tool_name: str, arguments: Dict[str, Any], call_id: str, is_state_modifying: bool = False) -> Tuple[Optional[Any], Optional[str]]:
         """Simulate tool execution with deterministic outputs and fault checking."""
         # Check fault injection
         if tool_name in self.fault_counts and self.fault_counts[tool_name] > 0:
@@ -41,8 +41,8 @@ class MockEnvironment:
             err = self.faults.get(tool_name, "Simulated transient API error")
             return None, err
 
-        # Check state-modifying tracking
-        if tool_name in ("book_flight", "create_ticket"):
+        # Check state-modifying tracking (dynamic, not hardcoded)
+        if is_state_modifying:
             self.executed_mutations.append({
                 "call_id": call_id,
                 "tool_name": tool_name,

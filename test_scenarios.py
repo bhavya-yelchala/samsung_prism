@@ -2,8 +2,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
-from schemas.events import EventType, InputEvent
-from harness.mock_env import MockEnvironment
+from events import EventType, InputEvent
+from mock_env import MockEnvironment
 
 
 @dataclass
