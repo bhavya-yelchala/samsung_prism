@@ -53,18 +53,3 @@ samsung_prism/
 ├── requirements.txt
 └── main.py                        # Benchmark CLI entry point
 ```
-
----
-
-## Evaluation Results
-
-| Pillar | Weight | Description | Status |
-| :--- | :---: | :--- | :---: |
-| **Task Completion** | **40%** | Tool execution accuracy, valid argument extraction, state snapshot consistency | **40.0 / 40** |
-| **Interruption Recovery** | **35%** | Immediate cancellation of superseded calls, absence of stale re-runs | **35.0 / 35** |
-| **Response Latency** | **15%** | Time to first spoken action ($\le 100\text{ ms}$) | **15.0 / 15** |
-| **Safety & Protocol** | **10%** | Zero duplicate state mutations, strict JSON schema adherence | **10.0 / 10** |
-| **Quality Multiplier** | **1.10×** | Transcript naturalness, truthfulness, grounded replies | **Applied** |
-| **Multimodal Multiplier** | **1.50×** | Multiplier for audio disfluency and visual frame grounding | **Applied** |
-
-**Total Canonical Benchmark Score:** **134.44 / 100 (Weighted & Multiplied)**.
